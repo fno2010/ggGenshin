@@ -224,13 +224,83 @@ def cmapZhongli(listed = False):
     else:
         return colors.LinearSegmentedColormap.from_list('Zhongli', pal)
 
-def keys():
+def keys(display: bool = False, format: str or None = 'txt', colormap: bool =False):
+    """List all the available keys in a table.
+
+    Parameters
+    ----------
+    display : bool, optional (default: False)
+        Whether to print the keys.
+    format : {'txt', 'csv', 'markdown', 'html'}, optinoal (default: 'txt')
+        The format of the output table.
+    colormap : bool, optional (default: False)
+        Whether to show the color list.
+
+    Returns
+    -------
+    output : str or None
+        A table containing all the available keys.
+        If `display` is True, return None.
+    """
     keys = (["keynames", "albedo", "alhaitham", "ayaka", "bennett", "collei", "diona", "dori", "faruzan", "ganyu", "itto", "jean", "jin", "kazuha", "keqing", "klee", "kokomi", "miko", "nahida", "nilou", "noelle", "razor", "sayu", "shenhe", "shogun", "sucrose", "tao", "tighnari", "venti", "xiangling", "xiao", "yoimiya", "zhongli"], \
             ["en.fullname", "Albedo", "Alhaitham", "Kamizato Ayaka", "Bennett", "Collei", "Diona", "Dori", "Faruzan", "Ganyu", "Arataki Itto", "Jean", "Yun Jin", "Kaedehara Kazuha", "Keqing", "Klee", "Sangonomiya Kokomi", "Yae Miko", "Nahida", "Nilou", "Noelle", "Razor", "Sayu", "Shenhe", "Raiden Shogun", "Sucrose", "Hu Tao", "Tighnari", "Venti", "Xiangling", "Xiao", "Yoimiya", "Zhongli"], \
             ["cn.fullname", "\u963f\u8d1d\u591a", "\u827e\u5c14\u6d77\u68ee", "\u795e\u91cc\u7eeb\u534e", "\u73ed\u5c3c\u7279", "\u67ef\u83b1", "\u8fea\u5965\u5a1c", "\u591a\u8389", "\u73d0\u9732\u73ca", "\u7518\u96e8", "\u8352\u6cf7\u4e00\u6597", "\u7434", "\u4e91\u5807", "\u67ab\u539f\u4e07\u53f6", "\u523b\u6674", "\u53ef\u8389", "\u73ca\u745a\u5bab\u5fc3\u6d77", "\u516b\u91cd\u795e\u5b50", "\u7eb3\u897f\u59b2", "\u59ae\u9732", "\u8bfa\u827e\u5c14", "\u96f7\u6cfd", "\u65e9\u67da", "\u7533\u9e64", "\u96f7\u7535\u5c06\u519b", "\u7802\u7cd6", "\u80e1\u6843", "\u63d0\u7eb3\u91cc", "\u6e29\u8fea", "\u9999\u83f1", "\u9b48", "\u5bb5\u5bab", "\u949f\u79bb"])
-    nrow = len(keys[0])
-    for i in range(nrow):
-        for j in range(2):
-            print(keys[j][i] + '\t', end = '')
-        print(keys[2][i])
+    
+    try:
+        import pandas as pd
+    except ImportError:
+        import warnings
+        warnings.warn('The package "pandas" is not found. The raw output will be returned.\n' +
+                      '- To get fancy output, you need to install the "pandas" package.\n' +
+                      '- Run `pip install pandas` or `conda install pandas`.\n')
+        return rawKeys(keys)
+    df = pd.DataFrame({tc[0]: tc[1:] for tc in keys})
+
+    if colormap:
+        df['colormaps'] = ''
+        for index, row in df.iterrows():
+            func = globals()['cmap{}'.format(row['keynames'].capitalize())]
+            df.at[index, 'colormaps'] = toHtml(func(listed=True).colors)
+
+    if format == 'txt':
+        output = df.to_string(index=False)
+    elif format == 'csv':
+        output = df.to_csv(index=False)
+    elif format == 'markdown':
+        try:
+            output = df.to_markdown(index=False)
+        except ImportError:
+            import warnings
+            warnings.warn('The package "tabulate" is not found. The html output will be returned.\n' +
+                          '- To get markdown output, you need to install the "tabulate" package.\n' +
+                          '- Run `pip install tabulate` or `conda install tabulate`.\n')
+            output = df.to_html(index=False, escape=False)
+    elif format == 'html':
+        output = df.to_html(index=False, escape=False)
+    else:
+        output = df
+
+    if display:
+        print(output)
+        return
+    else:
+        return output
+
+def rawKeys(keys, display=False):
+    if display:
+        nrow = len(keys[0])
+        for i in range(nrow):
+            for j in range(2):
+                print(keys[j][i] + '\t', end = '')
+            print(keys[2][i])
+        return
+    else:
+        return keys
+
+def toHtml(colors):
+    tbl = '<table><tr>'
+    for rgb in colors:
+        tbl += '<td style="background-color:rgb(%d,%d,%d);width:10px;heigth:10px;"></td>' % tuple(255*c for c in rgb)
+    tbl += '</tr></table>'
+    return tbl
 
